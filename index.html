@@ -11,7 +11,7 @@
       box-sizing: border-box;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
       -webkit-font-smoothing: antialiased;
       background-color: #fff;
     }
@@ -20,18 +20,18 @@
 <body>
   <div id="root"></div>
 
-  <script async src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-  <script async src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-  <script async src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-  <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/+esm"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script type="text/babel">
-    const { createContext, useContext, useState, useEffect } = React;
-    const { createClient } = supabase;
+    const { useState, useEffect, createContext, useContext } = React;
 
     const SUPABASE_URL = 'https://decbxkbgmfsnjaljifsq.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlY2J4a2JnbWZzbmphbGppZnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTc2MjUsImV4cCI6MjEwMDQzMzYyNX0.vKFJ-AqTGn7Q1donXWwz0QQfaoUw7hGra5jO0yyPyng';
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const AuthContext = createContext();
     const useAuth = () => useContext(AuthContext);
@@ -48,16 +48,9 @@
         color: 'white',
         fontSize: '14px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        zIndex: 9999,
-        animation: 'slideUp 0.3s ease-out'
+        zIndex: 9999
       }}>
         {message}
-        <style>{`
-          @keyframes slideUp {
-            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-          }
-        `}</style>
       </div>
     );
 
@@ -91,7 +84,7 @@
       );
     };
 
-    const Input = ({ label, type = 'text', value, onChange, required = false, ...props }) => (
+    const Input = ({ label, type = 'text', value, onChange, required = false }) => (
       <div style={{ marginBottom: '16px' }}>
         {label && <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>{label} {required && '*'}</label>}
         <input
@@ -108,7 +101,6 @@
             boxSizing: 'border-box',
             fontFamily: 'inherit'
           }}
-          {...props}
         />
       </div>
     );
@@ -167,79 +159,41 @@
 
       useEffect(() => {
         const checkUser = async () => {
-          const { data } = await supabaseClient.auth.getSession();
-          if (data.session) {
-            setUser(data.session.user);
-            const { data: userData } = await supabaseClient.from('users').select('role').eq('id', data.session.user.id).single();
-            if (userData) setUserRole(userData.role);
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              setUser(data.session.user);
+              const { data: userData } = await supabase.from('users').select('role').eq('id', data.session.user.id).single();
+              if (userData) setUserRole(userData.role);
+            }
+          } catch (err) {
+            console.error('Auth error:', err);
           }
           setLoading(false);
         };
         checkUser();
       }, []);
 
-      const signup = async (email, password, name) => {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) throw error;
-        
-        await supabaseClient.from('users').insert({
-          id: data.user.id,
-          email,
-          name,
-          role: 'operario'
-        });
-        return data.user;
-      };
-
       const signin = async (email, password) => {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        const { data: userData } = await supabase.from('users').select('role').eq('id', data.user.id).single();
+        if (userData) setUserRole(userData.role);
+        setUser(data.user);
         return data.user;
       };
 
       const logout = async () => {
-        await supabaseClient.auth.signOut();
+        await supabase.auth.signOut();
         setUser(null);
         setUserRole(null);
       };
 
       return (
-        <AuthContext.Provider value={{ user, loading, userRole, signup, signin, logout }}>
+        <AuthContext.Provider value={{ user, loading, userRole, signin, logout }}>
           {children}
         </AuthContext.Provider>
       );
-    };
-
-    const compressImage = async (file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target.result;
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            if (width > height) {
-              if (width > 1200) {
-                height = Math.round((height * 1200) / width);
-                width = 1200;
-              }
-            } else {
-              if (height > 1200) {
-                width = Math.round((width * 1200) / height);
-                height = 1200;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob(resolve, 'image/jpeg', 0.7);
-          };
-        };
-      });
     };
 
     const Login = ({ onLogin }) => {
@@ -282,25 +236,24 @@
       const { user, userRole } = useAuth();
       const [stats, setStats] = useState({ obras: 0, despesas: 0, receitas: 0, saldo: 0 });
       const [obras, setObras] = useState([]);
-      const [loading, setLoading] = useState(true);
 
       useEffect(() => {
         const loadData = async () => {
           try {
-            let obrasQuery = supabaseClient.from('obras').select('*');
+            let query = supabase.from('obras').select('*');
             if (userRole === 'operario') {
-              const { data: operarioObras } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
-              obrasQuery = obrasQuery.in('id', operarioObras?.map(o => o.obra_id) || []);
+              const { data: operarioObras } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+              query = query.in('id', operarioObras?.map(o => o.obra_id) || []);
             }
-            const { data: obrasData } = await obrasQuery.eq('status', 'ativa');
+            const { data: obrasData } = await query.eq('status', 'ativa');
             setObras(obrasData || []);
 
-            let despesasQuery = supabaseClient.from('despesas').select('valor').eq('status_pagamento', 'pago');
-            let receitasQuery = supabaseClient.from('receitas').select('valor').eq('status_recebimento', 'recebido');
+            let despesasQuery = supabase.from('despesas').select('valor').eq('status_pagamento', 'pago');
+            let receitasQuery = supabase.from('receitas').select('valor').eq('status_recebimento', 'recebido');
             
-            if (userRole === 'operario') {
-              despesasQuery = despesasQuery.in('obra_id', obrasData?.map(o => o.id) || []);
-              receitasQuery = receitasQuery.in('obra_id', obrasData?.map(o => o.id) || []);
+            if (userRole === 'operario' && obrasData) {
+              despesasQuery = despesasQuery.in('obra_id', obrasData.map(o => o.id));
+              receitasQuery = receitasQuery.in('obra_id', obrasData.map(o => o.id));
             }
 
             const { data: despesas } = await despesasQuery;
@@ -318,7 +271,6 @@
           } catch (err) {
             console.error(err);
           }
-          setLoading(false);
         };
         loadData();
       }, [user, userRole]);
@@ -375,14 +327,13 @@
       const { user, userRole } = useAuth();
       const [obras, setObras] = useState([]);
       const [filter, setFilter] = useState('ativa');
-      const [loading, setLoading] = useState(true);
 
       useEffect(() => {
         const loadObras = async () => {
           try {
-            let query = supabaseClient.from('obras').select('*');
+            let query = supabase.from('obras').select('*');
             if (userRole === 'operario') {
-              const { data: operarioObras } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+              const { data: operarioObras } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
               query = query.in('id', operarioObras?.map(o => o.obra_id) || []);
             }
             if (filter !== 'todas') {
@@ -393,7 +344,6 @@
           } catch (err) {
             console.error(err);
           }
-          setLoading(false);
         };
         loadObras();
       }, [filter, user, userRole]);
@@ -402,13 +352,13 @@
         <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ marginBottom: '16px' }}>Obras</h1>
           
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
             {['ativa', 'pausada', 'concluida', 'todas'].map(f => (
               <Button
                 key={f}
                 variant={filter === f ? 'primary' : 'secondary'}
                 onClick={() => setFilter(f)}
-                style={{ flex: 1, padding: '8px' }}
+                style={{ flex: 1, padding: '8px', minWidth: '80px' }}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </Button>
@@ -467,7 +417,7 @@
         e.preventDefault();
         setLoading(true);
         try {
-          const { error: err } = await supabaseClient.from('obras').insert({
+          const { error: err } = await supabase.from('obras').insert({
             ...formData,
             created_by: user.id
           });
@@ -540,18 +490,17 @@
     const DetalheObra = ({ obraId, onNavigate }) => {
       const [obra, setObra] = useState(null);
       const [movimentacoes, setMovimentacoes] = useState([]);
-      const [loading, setLoading] = useState(true);
       const [totalDespesas, setTotalDespesas] = useState(0);
       const [totalReceitas, setTotalReceitas] = useState(0);
 
       useEffect(() => {
         const loadData = async () => {
           try {
-            const { data: obraData } = await supabaseClient.from('obras').select('*').eq('id', obraId).single();
+            const { data: obraData } = await supabase.from('obras').select('*').eq('id', obraId).single();
             setObra(obraData);
 
-            const { data: despesas } = await supabaseClient.from('despesas').select('*').eq('obra_id', obraId).eq('status_pagamento', 'pago');
-            const { data: receitas } = await supabaseClient.from('receitas').select('*').eq('obra_id', obraId).eq('status_recebimento', 'recebido');
+            const { data: despesas } = await supabase.from('despesas').select('*').eq('obra_id', obraId).eq('status_pagamento', 'pago');
+            const { data: receitas } = await supabase.from('receitas').select('*').eq('obra_id', obraId).eq('status_recebimento', 'recebido');
 
             const movs = [
               ...(despesas || []).map(d => ({ ...d, type: 'despesa', valor: -parseFloat(d.valor) })),
@@ -564,7 +513,6 @@
           } catch (err) {
             console.error(err);
           }
-          setLoading(false);
         };
         loadData();
       }, [obraId]);
@@ -657,12 +605,12 @@
       useEffect(() => {
         const loadData = async () => {
           try {
-            const { data: obrasData } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+            const { data: obrasData } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
             const obraIds = obrasData?.map(o => o.obra_id) || [];
-            const { data: obras } = await supabaseClient.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
+            const { data: obras } = await supabase.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
             setObras(obras || []);
 
-            const { data: cats } = await supabaseClient.from('categorias').select('*');
+            const { data: cats } = await supabase.from('categorias').select('*');
             setCategorias(cats || []);
           } catch (err) {
             console.error(err);
@@ -670,6 +618,38 @@
         };
         loadData();
       }, [user]);
+
+      const compressImage = async (file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              if (width > height) {
+                if (width > 1200) {
+                  height = Math.round((height * 1200) / width);
+                  width = 1200;
+                }
+              } else {
+                if (height > 1200) {
+                  width = Math.round((width * 1200) / height);
+                  height = 1200;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob(resolve, 'image/jpeg', 0.7);
+            };
+          };
+        });
+      };
 
       const handleSubmit = async (e) => {
         e.preventDefault();
@@ -679,13 +659,13 @@
           if (foto) {
             const compressed = await compressImage(foto);
             const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
-            const { error: uploadError } = await supabaseClient.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
+            const { error: uploadError } = await supabase.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
             if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabaseClient.storage.from('comprovantes').getPublicUrl(fileName);
+            const { data: { publicUrl } } = supabase.storage.from('comprovantes').getPublicUrl(fileName);
             fotoUrl = publicUrl;
           }
 
-          const { error: err } = await supabaseClient.from('despesas').insert({
+          const { error: err } = await supabase.from('despesas').insert({
             ...formData,
             valor: parseFloat(formData.valor),
             created_by: user.id,
@@ -827,9 +807,9 @@
       useEffect(() => {
         const loadData = async () => {
           try {
-            const { data: obrasData } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+            const { data: obrasData } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
             const obraIds = obrasData?.map(o => o.obra_id) || [];
-            const { data: obras } = await supabaseClient.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
+            const { data: obras } = await supabase.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
             setObras(obras || []);
           } catch (err) {
             console.error(err);
@@ -837,6 +817,38 @@
         };
         loadData();
       }, [user]);
+
+      const compressImage = async (file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              if (width > height) {
+                if (width > 1200) {
+                  height = Math.round((height * 1200) / width);
+                  width = 1200;
+                }
+              } else {
+                if (height > 1200) {
+                  width = Math.round((width * 1200) / height);
+                  height = 1200;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob(resolve, 'image/jpeg', 0.7);
+            };
+          };
+        });
+      };
 
       const handleSubmit = async (e) => {
         e.preventDefault();
@@ -846,13 +858,13 @@
           if (foto) {
             const compressed = await compressImage(foto);
             const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
-            const { error: uploadError } = await supabaseClient.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
+            const { error: uploadError } = await supabase.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
             if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabaseClient.storage.from('comprovantes').getPublicUrl(fileName);
+            const { data: { publicUrl } } = supabase.storage.from('comprovantes').getPublicUrl(fileName);
             fotoUrl = publicUrl;
           }
 
-          const { error: err } = await supabaseClient.from('receitas').insert({
+          const { error: err } = await supabase.from('receitas').insert({
             ...formData,
             valor: parseFloat(formData.valor),
             created_by: user.id,
@@ -1034,7 +1046,7 @@
     };
 
     const App = () => {
-      const { user, loading, logout } = useAuth();
+      const { user, loading } = useAuth();
       const [currentPage, setCurrentPage] = useState('dashboard');
       const [params, setParams] = useState({});
 
