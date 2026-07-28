@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obras Financeiro</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script async src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script async src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script async src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/+esm"></script>
+
+  <script type="text/babel">
+    const { createContext, useContext, useState, useEffect } = React;
+    const { createClient } = supabase;
+
+    const SUPABASE_URL = 'https://decbxkbgmfsnjaljifsq.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlY2J4a2JnbWZzbmphbGppZnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NTc2MjUsImV4cCI6MjEwMDQzMzYyNX0.vKFJ-AqTGn7Q1donXWwz0QQfaoUw7hGra5jO0yyPyng';
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const AuthContext = createContext();
+    const useAuth = () => useContext(AuthContext);
+
+    const Toast = ({ message, type = 'success' }) => (
+      <div style={{
+        position: 'fixed',
+        bottom: '100px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        padding: '12px 20px',
+        borderRadius: '8px',
+        backgroundColor: type === 'success' ? '#10b981' : '#ef4444',
+        color: 'white',
+        fontSize: '14px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: 9999,
+        animation: 'slideUp 0.3s ease-out'
+      }}>
+        {message}
+        <style>{`
+          @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+          }
+        `}</style>
+      </div>
+    );
+
+    const Button = ({ children, onClick, variant = 'primary', disabled = false, style = {} }) => {
+      const variants = {
+        primary: { backgroundColor: '#0066cc', color: 'white' },
+        secondary: { backgroundColor: '#f3f4f6', color: '#1f2937' },
+        danger: { backgroundColor: '#ef4444', color: 'white' },
+        success: { backgroundColor: '#10b981', color: 'white' }
+      };
+
+      return (
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          style={{
+            padding: '10px 16px',
+            borderRadius: '6px',
+            border: 'none',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            opacity: disabled ? 0.5 : 1,
+            ...variants[variant],
+            ...style
+          }}
+        >
+          {children}
+        </button>
+      );
+    };
+
+    const Input = ({ label, type = 'text', value, onChange, required = false, ...props }) => (
+      <div style={{ marginBottom: '16px' }}>
+        {label && <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>{label} {required && '*'}</label>}
+        <input
+          type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+            fontFamily: 'inherit'
+          }}
+          {...props}
+        />
+      </div>
+    );
+
+    const Select = ({ label, value, onChange, options, required = false }) => (
+      <div style={{ marginBottom: '16px' }}>
+        {label && <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>{label} {required && '*'}</label>}
+        <select
+          value={value}
+          onChange={onChange}
+          required={required}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+            fontFamily: 'inherit'
+          }}
+        >
+          <option value="">Selecione...</option>
+          {options.map(opt => (
+            <option key={opt.id} value={opt.id}>{opt.nome}</option>
+          ))}
+        </select>
+      </div>
+    );
+
+    const Textarea = ({ label, value, onChange, required = false, rows = 3 }) => (
+      <div style={{ marginBottom: '16px' }}>
+        {label && <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>{label}</label>}
+        <textarea
+          value={value}
+          onChange={onChange}
+          required={required}
+          rows={rows}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+            fontFamily: 'inherit',
+            resize: 'vertical'
+          }}
+        />
+      </div>
+    );
+
+    const AuthProvider = ({ children }) => {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [userRole, setUserRole] = useState(null);
+
+      useEffect(() => {
+        const checkUser = async () => {
+          const { data } = await supabaseClient.auth.getSession();
+          if (data.session) {
+            setUser(data.session.user);
+            const { data: userData } = await supabaseClient.from('users').select('role').eq('id', data.session.user.id).single();
+            if (userData) setUserRole(userData.role);
+          }
+          setLoading(false);
+        };
+        checkUser();
+      }, []);
+
+      const signup = async (email, password, name) => {
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        
+        await supabaseClient.from('users').insert({
+          id: data.user.id,
+          email,
+          name,
+          role: 'operario'
+        });
+        return data.user;
+      };
+
+      const signin = async (email, password) => {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data.user;
+      };
+
+      const logout = async () => {
+        await supabaseClient.auth.signOut();
+        setUser(null);
+        setUserRole(null);
+      };
+
+      return (
+        <AuthContext.Provider value={{ user, loading, userRole, signup, signin, logout }}>
+          {children}
+        </AuthContext.Provider>
+      );
+    };
+
+    const compressImage = async (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > 1200) {
+                height = Math.round((height * 1200) / width);
+                width = 1200;
+              }
+            } else {
+              if (height > 1200) {
+                width = Math.round((width * 1200) / height);
+                height = 1200;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(resolve, 'image/jpeg', 0.7);
+          };
+        };
+      });
+    };
+
+    const Login = ({ onLogin }) => {
+      const { signin } = useAuth();
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          await signin(email, password);
+          onLogin();
+        } catch (err) {
+          setError(err.message);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '400px' }}>
+            <h1 style={{ textAlign: 'center', marginBottom: '30px', fontSize: '28px', fontWeight: 'bold' }}>Obras Fin</h1>
+            <form onSubmit={handleLogin}>
+              {error && <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '16px', color: '#991b1b', fontSize: '14px' }}>{error}</div>}
+              <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Button variant="primary" onClick={handleLogin} style={{ width: '100%', marginBottom: '12px' }} disabled={loading}>
+                {loading ? 'Entrando...' : 'Entrar'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    const Dashboard = ({ onNavigate }) => {
+      const { user, userRole } = useAuth();
+      const [stats, setStats] = useState({ obras: 0, despesas: 0, receitas: 0, saldo: 0 });
+      const [obras, setObras] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const loadData = async () => {
+          try {
+            let obrasQuery = supabaseClient.from('obras').select('*');
+            if (userRole === 'operario') {
+              const { data: operarioObras } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+              obrasQuery = obrasQuery.in('id', operarioObras?.map(o => o.obra_id) || []);
+            }
+            const { data: obrasData } = await obrasQuery.eq('status', 'ativa');
+            setObras(obrasData || []);
+
+            let despesasQuery = supabaseClient.from('despesas').select('valor').eq('status_pagamento', 'pago');
+            let receitasQuery = supabaseClient.from('receitas').select('valor').eq('status_recebimento', 'recebido');
+            
+            if (userRole === 'operario') {
+              despesasQuery = despesasQuery.in('obra_id', obrasData?.map(o => o.id) || []);
+              receitasQuery = receitasQuery.in('obra_id', obrasData?.map(o => o.id) || []);
+            }
+
+            const { data: despesas } = await despesasQuery;
+            const { data: receitas } = await receitasQuery;
+
+            const totalDespesas = despesas?.reduce((sum, d) => sum + parseFloat(d.valor || 0), 0) || 0;
+            const totalReceitas = receitas?.reduce((sum, r) => sum + parseFloat(r.valor || 0), 0) || 0;
+
+            setStats({
+              obras: obrasData?.length || 0,
+              despesas: totalDespesas,
+              receitas: totalReceitas,
+              saldo: totalReceitas - totalDespesas
+            });
+          } catch (err) {
+            console.error(err);
+          }
+          setLoading(false);
+        };
+        loadData();
+      }, [user, userRole]);
+
+      const StatCard = ({ label, value, color }) => (
+        <div style={{
+          flex: 1,
+          padding: '16px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>{label}</div>
+          <div style={{ fontSize: '20px', fontWeight: 'bold', color }}>{typeof value === 'number' ? `R$ ${value.toFixed(2).replace('.', ',')}` : value}</div>
+        </div>
+      );
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '20px' }}>Dashboard</h1>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+            <StatCard label="Obras Ativas" value={stats.obras} color="#0066cc" />
+            <StatCard label="Despesas (R$)" value={stats.despesas} color="#ef4444" />
+            <StatCard label="Receitas (R$)" value={stats.receitas} color="#10b981" />
+            <StatCard label="Saldo (R$)" value={stats.saldo} color={stats.saldo >= 0 ? '#10b981' : '#ef4444'} />
+          </div>
+
+          <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '12px' }}>Obras Ativas</h2>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {obras.map(obra => (
+              <div
+                key={obra.id}
+                onClick={() => onNavigate(`obra/${obra.id}`)}
+                style={{
+                  padding: '16px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{obra.nome}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>{obra.cliente}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const ListaObras = ({ onNavigate }) => {
+      const { user, userRole } = useAuth();
+      const [obras, setObras] = useState([]);
+      const [filter, setFilter] = useState('ativa');
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const loadObras = async () => {
+          try {
+            let query = supabaseClient.from('obras').select('*');
+            if (userRole === 'operario') {
+              const { data: operarioObras } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+              query = query.in('id', operarioObras?.map(o => o.obra_id) || []);
+            }
+            if (filter !== 'todas') {
+              query = query.eq('status', filter);
+            }
+            const { data } = await query;
+            setObras(data || []);
+          } catch (err) {
+            console.error(err);
+          }
+          setLoading(false);
+        };
+        loadObras();
+      }, [filter, user, userRole]);
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '16px' }}>Obras</h1>
+          
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            {['ativa', 'pausada', 'concluida', 'todas'].map(f => (
+              <Button
+                key={f}
+                variant={filter === f ? 'primary' : 'secondary'}
+                onClick={() => setFilter(f)}
+                style={{ flex: 1, padding: '8px' }}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </Button>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
+            {obras.map(obra => (
+              <div
+                key={obra.id}
+                onClick={() => onNavigate(`obra/${obra.id}`)}
+                style={{
+                  padding: '16px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{obra.nome}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                  {obra.cliente} • {obra.status}
+                </div>
+                <div style={{ fontSize: '12px', color: '#0066cc' }}>{obra.endereco}</div>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            variant="primary"
+            onClick={() => onNavigate('obra/nova')}
+            style={{ width: '100%' }}
+          >
+            + Nova Obra
+          </Button>
+        </div>
+      );
+    };
+
+    const NovaObra = ({ onNavigate }) => {
+      const { user } = useAuth();
+      const [formData, setFormData] = useState({
+        nome: '',
+        cliente: '',
+        endereco: '',
+        data_inicio: new Date().toISOString().split('T')[0],
+        data_fim_previsto: '',
+        valor_contratado: '',
+        observacoes: ''
+      });
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [success, setSuccess] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          const { error: err } = await supabaseClient.from('obras').insert({
+            ...formData,
+            created_by: user.id
+          });
+          if (err) throw err;
+          setSuccess(true);
+          setTimeout(() => onNavigate('obras'), 1500);
+        } catch (err) {
+          setError(err.message);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '20px' }}>Nova Obra</h1>
+          {error && <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '16px', color: '#991b1b' }}>{error}</div>}
+          {success && <Toast message="Obra criada com sucesso!" type="success" />}
+          
+          <form onSubmit={handleSubmit}>
+            <Input
+              label="Nome da Obra"
+              value={formData.nome}
+              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              required
+            />
+            <Input
+              label="Cliente"
+              value={formData.cliente}
+              onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+              required
+            />
+            <Input
+              label="Endereço"
+              value={formData.endereco}
+              onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+            />
+            <Input
+              label="Data de Início"
+              type="date"
+              value={formData.data_inicio}
+              onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
+              required
+            />
+            <Input
+              label="Data Previsão de Término"
+              type="date"
+              value={formData.data_fim_previsto}
+              onChange={(e) => setFormData({ ...formData, data_fim_previsto: e.target.value })}
+            />
+            <Input
+              label="Valor Contratado (R$)"
+              type="number"
+              step="0.01"
+              value={formData.valor_contratado}
+              onChange={(e) => setFormData({ ...formData, valor_contratado: e.target.value })}
+            />
+            <Textarea
+              label="Observações"
+              value={formData.observacoes}
+              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+            />
+            <Button variant="primary" onClick={handleSubmit} style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Salvando...' : 'Criar Obra'}
+            </Button>
+          </form>
+        </div>
+      );
+    };
+
+    const DetalheObra = ({ obraId, onNavigate }) => {
+      const [obra, setObra] = useState(null);
+      const [movimentacoes, setMovimentacoes] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [totalDespesas, setTotalDespesas] = useState(0);
+      const [totalReceitas, setTotalReceitas] = useState(0);
+
+      useEffect(() => {
+        const loadData = async () => {
+          try {
+            const { data: obraData } = await supabaseClient.from('obras').select('*').eq('id', obraId).single();
+            setObra(obraData);
+
+            const { data: despesas } = await supabaseClient.from('despesas').select('*').eq('obra_id', obraId).eq('status_pagamento', 'pago');
+            const { data: receitas } = await supabaseClient.from('receitas').select('*').eq('obra_id', obraId).eq('status_recebimento', 'recebido');
+
+            const movs = [
+              ...(despesas || []).map(d => ({ ...d, type: 'despesa', valor: -parseFloat(d.valor) })),
+              ...(receitas || []).map(r => ({ ...r, type: 'receita', valor: parseFloat(r.valor) }))
+            ].sort((a, b) => new Date(b.data_despesa || b.data_receita) - new Date(a.data_despesa || a.data_receita));
+
+            setMovimentacoes(movs);
+            setTotalDespesas(despesas?.reduce((sum, d) => sum + parseFloat(d.valor || 0), 0) || 0);
+            setTotalReceitas(receitas?.reduce((sum, r) => sum + parseFloat(r.valor || 0), 0) || 0);
+          } catch (err) {
+            console.error(err);
+          }
+          setLoading(false);
+        };
+        loadData();
+      }, [obraId]);
+
+      if (!obra) return <div style={{ padding: '16px' }}>Carregando...</div>;
+
+      const saldo = totalReceitas - totalDespesas;
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+            <h1 style={{ marginBottom: '8px' }}>{obra.nome}</h1>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
+              {obra.cliente} • {obra.endereco}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>Despesas</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ef4444' }}>
+                  R$ {totalDespesas.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>Receitas</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
+                  R$ {totalReceitas.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '12px', color: '#6b7280' }}>Saldo</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: saldo >= 0 ? '#10b981' : '#ef4444' }}>
+                  R$ {saldo.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px' }}>Movimentações</h2>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {movimentacoes.map(mov => (
+              <div
+                key={mov.id}
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>
+                    {mov.descricao}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                    {new Date(mov.data_despesa || mov.data_receita).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: mov.type === 'despesa' ? '#ef4444' : '#10b981' }}>
+                  {mov.type === 'despesa' ? '-' : '+'} R$ {Math.abs(mov.valor).toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const RegistrarDespesa = ({ onNavigate }) => {
+      const { user } = useAuth();
+      const [obras, setObras] = useState([]);
+      const [categorias, setCategorias] = useState([]);
+      const [formData, setFormData] = useState({
+        obra_id: '',
+        data_despesa: new Date().toISOString().split('T')[0],
+        descricao: '',
+        categoria_id: '',
+        valor: '',
+        forma_pagamento: 'pix',
+        fornecedor: '',
+        observacoes: ''
+      });
+      const [foto, setFoto] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [success, setSuccess] = useState(false);
+
+      useEffect(() => {
+        const loadData = async () => {
+          try {
+            const { data: obrasData } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+            const obraIds = obrasData?.map(o => o.obra_id) || [];
+            const { data: obras } = await supabaseClient.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
+            setObras(obras || []);
+
+            const { data: cats } = await supabaseClient.from('categorias').select('*');
+            setCategorias(cats || []);
+          } catch (err) {
+            console.error(err);
+          }
+        };
+        loadData();
+      }, [user]);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          let fotoUrl = null;
+          if (foto) {
+            const compressed = await compressImage(foto);
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
+            const { error: uploadError } = await supabaseClient.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabaseClient.storage.from('comprovantes').getPublicUrl(fileName);
+            fotoUrl = publicUrl;
+          }
+
+          const { error: err } = await supabaseClient.from('despesas').insert({
+            ...formData,
+            valor: parseFloat(formData.valor),
+            created_by: user.id,
+            foto_url: fotoUrl
+          });
+          if (err) throw err;
+          setSuccess(true);
+          setTimeout(() => {
+            setFormData({
+              obra_id: '',
+              data_despesa: new Date().toISOString().split('T')[0],
+              descricao: '',
+              categoria_id: '',
+              valor: '',
+              forma_pagamento: 'pix',
+              fornecedor: '',
+              observacoes: ''
+            });
+            setFoto(null);
+            setSuccess(false);
+          }, 1500);
+        } catch (err) {
+          setError(err.message);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '20px' }}>Nova Despesa</h1>
+          {error && <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '16px', color: '#991b1b' }}>{error}</div>}
+          {success && <Toast message="Despesa registrada!" type="success" />}
+          
+          <form onSubmit={handleSubmit}>
+            <Select
+              label="Obra"
+              value={formData.obra_id}
+              onChange={(e) => setFormData({ ...formData, obra_id: e.target.value })}
+              options={obras}
+              required
+            />
+            <Input
+              label="Data"
+              type="date"
+              value={formData.data_despesa}
+              onChange={(e) => setFormData({ ...formData, data_despesa: e.target.value })}
+              required
+            />
+            <Input
+              label="Descrição"
+              value={formData.descricao}
+              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+              required
+            />
+            <Select
+              label="Categoria"
+              value={formData.categoria_id}
+              onChange={(e) => setFormData({ ...formData, categoria_id: e.target.value })}
+              options={categorias}
+              required
+            />
+            <Input
+              label="Valor (R$)"
+              type="number"
+              step="0.01"
+              value={formData.valor}
+              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              required
+            />
+            <Select
+              label="Forma de Pagamento"
+              value={formData.forma_pagamento}
+              onChange={(e) => setFormData({ ...formData, forma_pagamento: e.target.value })}
+              options={[
+                { id: 'pix', nome: 'PIX' },
+                { id: 'transferencia', nome: 'Transferência Bancária' },
+                { id: 'boleto', nome: 'Boleto' },
+                { id: 'dinheiro', nome: 'Dinheiro' },
+                { id: 'cartao_credito', nome: 'Cartão de Crédito' },
+                { id: 'cartao_debito', nome: 'Cartão de Débito' },
+                { id: 'cheque', nome: 'Cheque' },
+                { id: 'outro', nome: 'Outro' }
+              ]}
+            />
+            <Input
+              label="Fornecedor (opcional)"
+              value={formData.fornecedor}
+              onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
+            />
+            <Textarea
+              label="Observações"
+              value={formData.observacoes}
+              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+              rows={3}
+            />
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>Foto do Comprovante</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFoto(e.target.files?.[0])}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px dashed #e5e7eb',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {foto && <div style={{ fontSize: '12px', color: '#059669', marginTop: '6px' }}>✓ {foto.name}</div>}
+            </div>
+
+            <Button variant="primary" onClick={handleSubmit} style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Salvando...' : 'Registrar Despesa'}
+            </Button>
+          </form>
+        </div>
+      );
+    };
+
+    const RegistrarReceita = ({ onNavigate }) => {
+      const { user } = useAuth();
+      const [obras, setObras] = useState([]);
+      const [formData, setFormData] = useState({
+        obra_id: '',
+        data_receita: new Date().toISOString().split('T')[0],
+        descricao: '',
+        valor: '',
+        forma_recebimento: 'pix',
+        observacoes: ''
+      });
+      const [foto, setFoto] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [success, setSuccess] = useState(false);
+
+      useEffect(() => {
+        const loadData = async () => {
+          try {
+            const { data: obrasData } = await supabaseClient.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+            const obraIds = obrasData?.map(o => o.obra_id) || [];
+            const { data: obras } = await supabaseClient.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
+            setObras(obras || []);
+          } catch (err) {
+            console.error(err);
+          }
+        };
+        loadData();
+      }, [user]);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+          let fotoUrl = null;
+          if (foto) {
+            const compressed = await compressImage(foto);
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
+            const { error: uploadError } = await supabaseClient.storage.from('comprovantes').upload(fileName, compressed, { contentType: 'image/jpeg' });
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabaseClient.storage.from('comprovantes').getPublicUrl(fileName);
+            fotoUrl = publicUrl;
+          }
+
+          const { error: err } = await supabaseClient.from('receitas').insert({
+            ...formData,
+            valor: parseFloat(formData.valor),
+            created_by: user.id,
+            foto_url: fotoUrl
+          });
+          if (err) throw err;
+          setSuccess(true);
+          setTimeout(() => {
+            setFormData({
+              obra_id: '',
+              data_receita: new Date().toISOString().split('T')[0],
+              descricao: '',
+              valor: '',
+              forma_recebimento: 'pix',
+              observacoes: ''
+            });
+            setFoto(null);
+            setSuccess(false);
+          }, 1500);
+        } catch (err) {
+          setError(err.message);
+        }
+        setLoading(false);
+      };
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '20px' }}>Nova Receita</h1>
+          {error && <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '16px', color: '#991b1b' }}>{error}</div>}
+          {success && <Toast message="Receita registrada!" type="success" />}
+          
+          <form onSubmit={handleSubmit}>
+            <Select
+              label="Obra"
+              value={formData.obra_id}
+              onChange={(e) => setFormData({ ...formData, obra_id: e.target.value })}
+              options={obras}
+              required
+            />
+            <Input
+              label="Data"
+              type="date"
+              value={formData.data_receita}
+              onChange={(e) => setFormData({ ...formData, data_receita: e.target.value })}
+              required
+            />
+            <Input
+              label="Descrição"
+              value={formData.descricao}
+              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+              required
+            />
+            <Input
+              label="Valor (R$)"
+              type="number"
+              step="0.01"
+              value={formData.valor}
+              onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
+              required
+            />
+            <Select
+              label="Forma de Recebimento"
+              value={formData.forma_recebimento}
+              onChange={(e) => setFormData({ ...formData, forma_recebimento: e.target.value })}
+              options={[
+                { id: 'pix', nome: 'PIX' },
+                { id: 'transferencia', nome: 'Transferência' },
+                { id: 'boleto', nome: 'Boleto' },
+                { id: 'dinheiro', nome: 'Dinheiro' },
+                { id: 'cartao', nome: 'Cartão' },
+                { id: 'outro', nome: 'Outro' }
+              ]}
+            />
+            <Textarea
+              label="Observações"
+              value={formData.observacoes}
+              onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+              rows={3}
+            />
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500' }}>Foto do Comprovante</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFoto(e.target.files?.[0])}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px dashed #e5e7eb',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {foto && <div style={{ fontSize: '12px', color: '#059669', marginTop: '6px' }}>✓ {foto.name}</div>}
+            </div>
+
+            <Button variant="primary" onClick={handleSubmit} style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Salvando...' : 'Registrar Receita'}
+            </Button>
+          </form>
+        </div>
+      );
+    };
+
+    const Configuracoes = ({ onNavigate }) => {
+      const { user, logout } = useAuth();
+
+      return (
+        <div style={{ padding: '16px', paddingBottom: '100px', maxWidth: '800px', margin: '0 auto' }}>
+          <h1 style={{ marginBottom: '20px' }}>Configurações</h1>
+          
+          <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', marginBottom: '16px', border: '1px solid #e5e7eb' }}>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>Email</div>
+            <div style={{ fontSize: '16px', fontWeight: '500' }}>{user?.email}</div>
+          </div>
+
+          <Button
+            variant="danger"
+            onClick={async () => {
+              await logout();
+              onNavigate('login');
+            }}
+            style={{ width: '100%' }}
+          >
+            Sair
+          </Button>
+        </div>
+      );
+    };
+
+    const BottomNavBar = ({ currentPage, onNavigate }) => {
+      const navItems = [
+        { icon: '🏠', label: 'Home', page: 'dashboard' },
+        { icon: '📋', label: 'Obras', page: 'obras' },
+        { icon: '➕', label: 'Registrar', page: 'registrar' },
+        { icon: '📊', label: 'Movim.', page: 'movimentacoes' },
+        { icon: '⚙️', label: 'Config', page: 'configuracoes' }
+      ];
+
+      return (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'white',
+          borderTop: '1px solid #e5e7eb',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          padding: '8px 0',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.08)'
+        }}>
+          {navItems.map(item => (
+            <button
+              key={item.page}
+              onClick={() => onNavigate(item.page)}
+              style={{
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                padding: '12px 8px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                color: currentPage === item.page ? '#0066cc' : '#6b7280',
+                transition: 'color 0.2s'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      );
+    };
+
+    const App = () => {
+      const { user, loading, logout } = useAuth();
+      const [currentPage, setCurrentPage] = useState('dashboard');
+      const [params, setParams] = useState({});
+
+      const navigate = (page) => {
+        const [path, ...rest] = page.split('/');
+        setCurrentPage(path);
+        setParams({ id: rest[0], type: rest[1] });
+      };
+
+      if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>;
+      
+      if (!user) return <Login onLogin={() => navigate('dashboard')} />;
+
+      const renderPage = () => {
+        switch (currentPage) {
+          case 'dashboard': return <Dashboard onNavigate={navigate} />;
+          case 'obras': return <ListaObras onNavigate={navigate} />;
+          case 'obra': return params.id === 'nova' ? <NovaObra onNavigate={navigate} /> : <DetalheObra obraId={params.id} onNavigate={navigate} />;
+          case 'registrar': return <RegistrarDespesa onNavigate={navigate} />;
+          case 'configuracoes': return <Configuracoes onNavigate={navigate} />;
+          default: return <Dashboard onNavigate={navigate} />;
+        }
+      };
+
+      return (
+        <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#fff', minHeight: '100vh' }}>
+          {renderPage()}
+          <BottomNavBar currentPage={currentPage} onNavigate={navigate} />
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <React.StrictMode>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </React.StrictMode>
+    );
+  </script>
+</body>
+</html>
