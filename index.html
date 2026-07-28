@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Obras Financeiro</title>
+  <title>Artecs Obras Financeiro</title>
   <style>
     * {
       margin: 0;
@@ -218,7 +218,7 @@
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', padding: '20px' }}>
           <div style={{ width: '100%', maxWidth: '400px' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '30px', fontSize: '28px', fontWeight: 'bold' }}>Obras Fin</h1>
+            <h1 style={{ textAlign: 'center', marginBottom: '30px', fontSize: '28px', fontWeight: 'bold' }}>Artecs Obras Fin</h1>
             <form onSubmit={handleLogin}>
               {error && <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px', marginBottom: '16px', color: '#991b1b', fontSize: '14px' }}>{error}</div>}
               <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -605,9 +605,16 @@
       useEffect(() => {
         const loadData = async () => {
           try {
-            const { data: obrasData } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
-            const obraIds = obrasData?.map(o => o.obra_id) || [];
-            const { data: obras } = await supabase.from('obras').select('*').in('id', obraIds).eq('status', 'ativa');
+            let obrasQuery = supabase.from('obras').select('*').eq('status', 'ativa');
+            
+            // Se for admin, mostra todas as obras. Se for operario, filtra por assignação
+            if (userRole === 'operario') {
+              const { data: obrasData } = await supabase.from('obra_operarios').select('obra_id').eq('operario_id', user.id);
+              const obraIds = obrasData?.map(o => o.obra_id) || [];
+              obrasQuery = obrasQuery.in('id', obraIds);
+            }
+            
+            const { data: obras } = await obrasQuery;
             setObras(obras || []);
 
             const { data: cats } = await supabase.from('categorias').select('*');
@@ -617,7 +624,7 @@
           }
         };
         loadData();
-      }, [user]);
+      }, [user, userRole]);
 
       const compressImage = async (file) => {
         return new Promise((resolve) => {
